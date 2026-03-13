@@ -499,3 +499,9 @@ if __name__ == "__main__":
                 print(f"  {cls_name:>15}: {n}")
     else:
         print("\nNo test images found for demo.")
+
+
+# notes to self
+# could improve speed by not keeping background patches
+# could improve bounding boxes by merging coords of high confidence ones
+# i forgor
