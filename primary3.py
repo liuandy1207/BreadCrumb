@@ -287,11 +287,11 @@ def train_model(model, train_loader, val_loader, num_classes,
     ax1.plot(train_losses, label="Train loss")
     ax1.plot(val_losses,   label="Val loss")
     ax1.set_xlabel("Epoch"); ax1.set_ylabel("Loss")
-    ax1.set_title(f"{model.name} — Loss"); ax1.legend()
+    ax1.set_title(f"{model.name} - Loss"); ax1.legend()
     ax2.plot(train_accs, label="Train acc")
     ax2.plot(val_accs,   label="Val acc")
     ax2.set_xlabel("Epoch"); ax2.set_ylabel("Accuracy")
-    ax2.set_title(f"{model.name} — Accuracy"); ax2.legend()
+    ax2.set_title(f"{model.name} - Accuracy"); ax2.legend()
     plt.tight_layout()
     fname = f"training_curves_{model.name}.png"
     plt.savefig(fname, dpi=150); plt.close()
@@ -439,7 +439,7 @@ def predict_counts(model, image_path, classes,
                     bbox=dict(facecolor="white", alpha=0.6, pad=2))
         
         title = "  |  ".join(f"{k}: {v}" for k, v in counts.items())
-        ax.set_title(title, fontsize=20)
+        ax.set_title(title, fontsize=24)
         ax.axis("off")  # hide ticks
         plt.tight_layout()
         plt.savefig(save_vis, dpi=150); plt.close()
