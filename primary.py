@@ -133,9 +133,8 @@ class Primary(nn.Module):
         self.num_classes = num_classes
 
         transfer = models.resnet18(pretrained=True)
-        # remove final classifer layer, cuz we don't need those classes
+        # remove final classifier layer
         self.features = nn.Sequential(*list(transfer.children())[:-1])
-        # freeze early layers
         for param in self.features.parameters():
             param.requires_grad = False
 
@@ -148,10 +147,11 @@ class Primary(nn.Module):
         x = self.features(x)
         x = self.pool(x)
         x = self.head(x)
-        x = x.permute(0, 2, 3, 1) # rearrange into BLWC, easier
-        objectness = torch.sigmoid(x[..., 0:1])
-        class_probs = F.softmax(x[..., 1:], dim=-1)
-        return torch.cat([objectness, class_probs], dim=-1)
+        x = x.permute(0, 2, 3, 1)  # B x G x G x (1+num_classes)
+        # multi-label: sigmoid for both objectness and classes
+        x[...,0:1] = torch.sigmoid(x[...,0:1])
+        x[...,1:] = torch.sigmoid(x[...,1:])
+        return x
 
 
 ################################################################################
@@ -250,27 +250,16 @@ import torch
 import torch.nn.functional as F
 
 def sanity_check(model, dataset, num_images=2, epochs=50, lr=1e-2, device=None):
-    """
-    Train the model on a small subset to check if it can overfit.
-    
-    Args:
-        model: your Primary model
-        dataset: PyTorch Dataset (COCODataset)
-        num_images: number of images to use for sanity check
-        epochs: number of epochs to train
-        lr: learning rate
-        device: "cuda" or "cpu"
-    """
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     model.train()
 
-    # small subset loader
     subset = torch.utils.data.Subset(dataset, range(num_images))
     loader = torch.utils.data.DataLoader(subset, batch_size=num_images, shuffle=True)
 
     optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9)
+    criterion = nn.BCEWithLogitsLoss()  # works for multi-label
 
     for epoch in range(epochs):
         total_loss = 0
@@ -282,16 +271,12 @@ def sanity_check(model, dataset, num_images=2, epochs=50, lr=1e-2, device=None):
         for images, targets in loader:
             images, targets = images.to(device), targets.to(device)
             preds = model(images)
+            print_grid_counts(preds)
 
-            # BCE loss
-            obj_loss = F.binary_cross_entropy(preds[...,0], targets[...,0])
-            cls_loss = F.cross_entropy(preds[...,1:], targets[...,1:])
-            loss = obj_loss + cls_loss
-
+            loss = criterion(preds, targets)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-
             total_loss += loss.item()
 
             # objectness accuracy
@@ -299,13 +284,13 @@ def sanity_check(model, dataset, num_images=2, epochs=50, lr=1e-2, device=None):
             correct_obj += (pred_obj == targets[...,0]).sum().item()
             total_obj += targets[...,0].numel()
 
-            # class accuracy (only where object exists)
+            # class accuracy (multi-label)
             mask = targets[...,0] == 1
             if mask.sum() > 0:
-                pred_cls = torch.argmax(preds[...,1:], dim=-1)
-                true_cls = torch.argmax(targets[...,1:], dim=-1)
-                correct_cls += (pred_cls[mask] == true_cls[mask]).sum().item()
-                total_cls += mask.sum().item()
+                pred_class = (preds[...,1:] > 0.5).float()
+                true_class = targets[...,1:]
+                correct_cls += (pred_class[mask] == true_class[mask]).sum().item()
+                total_cls += mask[mask].numel() * true_class.shape[-1]
 
         print(
             f"Epoch {epoch+1}: Loss={total_loss/len(loader):.4f}, "
@@ -313,6 +298,21 @@ def sanity_check(model, dataset, num_images=2, epochs=50, lr=1e-2, device=None):
             f"Cls Acc={correct_cls/total_cls if total_cls>0 else 0:.4f}"
         )
 
+
+import torch
+
+def print_grid_counts(preds, obj_thresh=0.5, class_thresh=0.5):
+    if preds.dim() == 3:
+        preds = preds.unsqueeze(0)
+
+    for b in range(preds.shape[0]):
+        grid = preds[b]
+        obj_mask = grid[..., 0] > obj_thresh
+        counts = []
+        for c in range(1, grid.shape[-1]):
+            class_mask = (grid[..., c] > class_thresh) & obj_mask
+            counts.append(int(class_mask.sum().item()))
+        print("Counts per class:", counts)
 
 
 ################################################################################
@@ -323,10 +323,10 @@ if __name__ == "__main__":
     torch.manual_seed(1)
     train_loader, val_loader, test_loader, classes = get_data_loaders(batch_size=8, grid_size=8)
 
-    train_dataset = COCODataset("dataset/train", grid_size=8, num_classes=5)
+    train_dataset = COCODataset("dataset/train", grid_size=64, num_classes=5)
 
-    primary = Primary(grid_size = 8)
-    sanity_check(primary, train_dataset, num_images=20, epochs=50, lr=1e-2, device=None)
+    primary = Primary(grid_size = 64)
+    sanity_check(primary, train_dataset, num_images=2, epochs=50, lr=1e-2, device=None)
     # train_model(primary, train_loader, val_loader, epochs=10, lr = 1e-3)
 
 
