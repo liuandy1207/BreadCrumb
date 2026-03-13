@@ -435,11 +435,11 @@ def predict_counts(model, image_path, classes,
                                       edgecolor=col, facecolor="none")
             ax.add_patch(rect)
             # label box
-            ax.text(x0, y0 - 4, f"{cls_name} {conf:.2f}", color=col, fontsize=8,
-                    bbox=dict(facecolor="white", alpha=0.6, pad=1))
+            ax.text(x0, y0 - 4, f"{cls_name} {conf:.2f}", color=col, fontsize=16,
+                    bbox=dict(facecolor="white", alpha=0.6, pad=2))
         
         title = "  |  ".join(f"{k}: {v}" for k, v in counts.items())
-        ax.set_title(title)
+        ax.set_title(title, fontsize=20)
         ax.axis("off")  # hide ticks
         plt.tight_layout()
         plt.savefig(save_vis, dpi=150); plt.close()
