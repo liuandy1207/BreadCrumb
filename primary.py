@@ -9,9 +9,9 @@ import torch
 import os     # to manage files
 import json   # to read COCO annotations
 from torch.utils.data import Dataset    # to make a custom dataset
-import torchvision.transforms as transforms
-import matplotlib.pyplot as plt
-
+import torchvision.transforms as transforms     # to process images
+import matplotlib.pyplot as plt         # to get images
+from torch.utils.data import DataLoader     # to make data loaders
 
 ################################################################################
 #                              Data Loading
@@ -80,6 +80,43 @@ class COCODataset(Dataset):
                 label[gy,gx,1+cls] = 1 # later indexes are one-hot encoding
 
         return image, label
+
+def get_data_loaders(batch_size, grid_size=8, num_classes=5):
+    classes = ["resistor","led","push button","logic gate","capacitor"]
+    train_dataset = COCODataset(
+        folder="dataset/train",
+        grid_size=grid_size,
+        num_classes=num_classes
+    )
+
+    val_dataset = COCODataset(
+        folder="dataset/val",
+        grid_size=grid_size,
+        num_classes=num_classes
+    )
+
+    test_dataset = COCODataset(
+        folder="dataset/test",
+        grid_size=grid_size,
+        num_classes=num_classes
+    )
+
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True
+    )
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=batch_size,
+        shuffle=False
+    )
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=False
+    )
+    return train_loader, val_loader, test_loader, classes
 
 
 
