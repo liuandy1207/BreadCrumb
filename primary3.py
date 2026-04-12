@@ -439,7 +439,7 @@ def predict_counts(model, image_path, classes,
                     bbox=dict(facecolor="white", alpha=0.6, pad=2))
         
         title = "  |  ".join(f"{k}: {v}" for k, v in counts.items())
-        ax.set_title(title, fontsize=24)
+        ax.set_title(title, fontsize=20)
         ax.axis("off")  # hide ticks
         plt.tight_layout()
         plt.savefig(save_vis, dpi=150); plt.close()

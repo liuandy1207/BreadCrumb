@@ -19,7 +19,7 @@ if not test_images:
     print("No test images found in dataset/test/")
     exit()
 
-image_path = test_images[0]
+image_path = test_images[2]
 print(f"Running on: {image_path}")
 
 baseline = BaselineANN(patch_size=PATCH_SIZE, num_classes=num_classes)
@@ -27,7 +27,7 @@ baseline.load_state_dict(torch.load("baseline_model.pt", map_location=device))
 baseline.eval()
 
 counts_baseline = predict_counts(baseline, image_path, classes,
-                                 save_vis="demo_baseline.png")
+                                 save_vis="demo_baseline2.png")
 print("\nBaselineANN detections:")
 for cls_name, n in counts_baseline.items():
     if n > 0:
@@ -39,7 +39,7 @@ model.load_state_dict(torch.load("best_model.pt", map_location=device))
 model.eval()
 
 counts_model = predict_counts(model, image_path, classes,
-                              save_vis="demo_patchclassifier.png")
+                              save_vis="demo_patchclassifier2.png")
 print("\nPatchClassifier detections:")
 for cls_name, n in counts_model.items():
     if n > 0:
